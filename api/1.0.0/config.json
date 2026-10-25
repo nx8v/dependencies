@@ -1,0 +1,10 @@
+{
+  "driver": "mysql",
+  "namespace": "api",
+  "resources": ["posts", "comments", "albums", "photos", "todos", "users"],
+  "relations": {
+    "posts": { "comments": "postId" },
+    "users": { "posts": "userId", "albums": "userId", "todos": "userId" },
+    "albums": { "photos": "albumId" }
+  }
+}

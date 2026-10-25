@@ -86,6 +86,43 @@ Halaman hanya mengirim `POST /api/storage`. Nama driver ada di badan JSON (`driv
 | `postgreSQL` | `POST /api/storage` | `postgreSQL/config.json` |
 | `firebase` | `POST /api/storage` | `firebase/config.json` |
 
+### Mengirim perintah
+
+Badan `POST /api/storage` adalah perintah JSON yang sama dengan [bentuk perintah](#4-bentuk-perintah). Tambahkan `"driver"`. Nilainya harus ada di `drivers`. Bila `driver` kosong, server memakai nama pertama dalam daftar itu.
+
+Dari komputer lain, header `Authorization: Bearer` wajib. Token itu harus sudah punya grant `storage` di modul Middleware. Nama di grant adalah nama klien, misalnya `admin`. Rahasia token yang ditaruh di header.
+
+Dari komputer yang menjalankan nx8v, form tetap boleh mengirim tanpa Bearer.
+
+JSON harus utuh. Angka tidak boleh terbelah oleh pindah baris. `40` yang tertulis `4` di satu baris dan `0` di baris berikutnya membuat badan itu bukan JSON. Server membalas:
+
+```json
+{ "ok": false, "error": "bad_request", "hint": "body bukan JSON" }
+```
+
+Contoh banyak record, satu baris:
+
+```bash
+curl --location -X POST "http://localhost:5023/api/storage" ^
+  --header "Authorization: Bearer TOKEN_ADMIN" ^
+  --header "Content-Type: application/json" ^
+  --data "{\"op\":\"insert\",\"table\":\"users\",\"driver\":\"mysql\",\"data\":[{\"nama\":\"Budi\",\"umur\":40},{\"nama\":\"Siti\",\"umur\":17}]}"
+```
+
+Balasan sukses:
+
+```json
+{
+  "ok": true,
+  "data": [
+    { "id": "k-...", "nama": "Budi", "umur": 40 },
+    { "id": "k-...", "nama": "Siti", "umur": 17 }
+  ]
+}
+```
+
+`users` di contoh ini tabel yang sama dengan form, namespace `default`.
+
 ### MySQL
 
 `modules/storage/mysql/config.json`:
@@ -412,7 +449,7 @@ Gagal:
 
 | `error` | Arti |
 |---|---|
-| `bad_request` | perintah rusak, atau field wajib kosong |
+| `bad_request` | perintah rusak, field wajib kosong, atau badan HTTP bukan JSON |
 | `unknown_op` | `op` tidak dikenal |
 | `not_found` | record tidak ada |
 | `no_table` | `table` wajib |
@@ -566,10 +603,9 @@ modules/storage/
 └── firebase/config.json
 ```
 
-Import di dalam modul memakai path absolut. URL modulnya `/storage`, tanpa garis miring di akhir, jadi import relatif jatuh ke luar folder.
+Import di dalam folder modul memakai path relatif. Halaman tetap `import { mysql } from "/storage"`.
 
 ```js
-import { localstorage } from "/storage/localstorage/index.js";
+import { localstorage } from "./localstorage/index.js";
+import "./engine.js";
 ```
-
-Halaman cukup `import { mysql } from "/storage"`.

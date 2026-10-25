@@ -18,16 +18,13 @@
  * Dokumentasi lengkap: ./README.md
  */
 
-// Path absolut: NX8V melayani modul di "/<nama>/<berkas>". Import relatif tidak
-// dipakai karena URL modul "/storage" tidak berakhiran "/", sehingga
-// "./localstorage/index.js" akan resolve ke "/localstorage/index.js" (404).
-import { localstorage } from "/storage/localstorage/index.js?v=3";
-import { indexeDB as indexeDBDriver } from "/storage/indexeDB/index.js?v=3";
-import { sqlite as sqliteDriver } from "/storage/sqlite/index.js?v=4";
-import { firebase as firebaseDriver } from "/storage/firebase/index.js?v=8";
-import { mysql as mysqlDriver } from "/storage/mysql/index.js?v=4";
-import { postgreSQL as postgreSQLDriver } from "/storage/postgreSQL/index.js?v=4";
-import "/storage/engine.js?v=5";
+import { localstorage } from "./localstorage/index.js?v=3";
+import { indexeDB as indexeDBDriver } from "./indexeDB/index.js?v=3";
+import { sqlite as sqliteDriver } from "./sqlite/index.js?v=4";
+import { firebase as firebaseDriver } from "./firebase/index.js?v=8";
+import { mysql as mysqlDriver } from "./mysql/index.js?v=4";
+import { postgreSQL as postgreSQLDriver } from "./postgreSQL/index.js?v=4";
+import "./engine.js?v=5";
 
 const MODULE_PREFIX = "nx";
 const DEFAULT_NAMESPACE = "default";
