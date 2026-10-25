@@ -23,10 +23,10 @@
 // "./localstorage/index.js" akan resolve ke "/localstorage/index.js" (404).
 import { localstorage } from "/storage/localstorage/index.js?v=3";
 import { indexeDB as indexeDBDriver } from "/storage/indexeDB/index.js?v=3";
-import { sqlite as sqliteDriver } from "/storage/sqlite/index.js?v=3";
-import { firebase as firebaseDriver } from "/storage/firebase/index.js?v=7";
-import { mysql as mysqlDriver } from "/storage/mysql/index.js?v=3";
-import { postgreSQL as postgreSQLDriver } from "/storage/postgreSQL/index.js?v=3";
+import { sqlite as sqliteDriver } from "/storage/sqlite/index.js?v=4";
+import { firebase as firebaseDriver } from "/storage/firebase/index.js?v=8";
+import { mysql as mysqlDriver } from "/storage/mysql/index.js?v=4";
+import { postgreSQL as postgreSQLDriver } from "/storage/postgreSQL/index.js?v=4";
 import "/storage/engine.js?v=5";
 
 const MODULE_PREFIX = "nx";
@@ -603,13 +603,13 @@ function createAPI(driver) {
     if (normalized.cmd.op !== "config" && !driver.available()) {
       const hint =
         driver.name === "sqlite"
-          ? "SQLite di browser butuh fetch ke /api/storage. Muat ulang halaman lewat nx8v."
+          ? "SQLite lewat POST /api/storage. Jalankan ulang nx8v bila server.cjs baru."
           : driver.name === "mysql"
-          ? "MySQL lewat POST /api/storage/mysql. Isi modules/storage/mysql/config.json lalu jalankan ulang nx8v."
+          ? "MySQL lewat POST /api/storage. Nama mysql harus ada di modules/storage/config.json, lalu jalankan ulang nx8v."
           : driver.name === "postgreSQL"
-          ? "PostgreSQL lewat POST /api/storage/postgreSQL. Isi modules/storage/postgreSQL/config.json lalu jalankan ulang nx8v."
+          ? "PostgreSQL lewat POST /api/storage. Nama postgreSQL harus ada di modules/storage/config.json, lalu jalankan ulang nx8v."
           : driver.name === "firebase"
-          ? "Firebase lewat POST /api/storage/firebase. Isi modules/storage/firebase/config.json lalu jalankan ulang nx8v."
+          ? "Firebase lewat POST /api/storage. Nama firebase harus ada di modules/storage/config.json, lalu jalankan ulang nx8v."
           : `Driver ${driver.name} tidak tersedia di browser ini`;
       return fail("driver_unavailable", hint);
     }
@@ -729,10 +729,10 @@ export const sqlite = createAPI(sqliteDriver);
 /** Driver Firebase Realtime Database (butuh konfigurasi) */
 export const firebase = createAPI(firebaseDriver);
 
-/** Driver MySQL — POST /api/storage/mysql, sambungan di modules/storage/mysql/config.json */
+/** Driver MySQL — POST /api/storage, sambungan di modules/storage/mysql/config.json */
 export const mysql = createAPI(mysqlDriver);
 
-/** Driver PostgreSQL — POST /api/storage/postgreSQL, sambungan di modules/storage/postgreSQL/config.json */
+/** Driver PostgreSQL — POST /api/storage, sambungan di modules/storage/postgreSQL/config.json */
 export const postgreSQL = createAPI(postgreSQLDriver);
 
 export default storage;

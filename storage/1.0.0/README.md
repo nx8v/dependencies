@@ -77,14 +77,14 @@ Daftar nama di `modules/storage/config.json`:
 
 Nama yang boleh ditulis: `sqlite`, `mysql`, `postgreSQL`, `firebase`. Nama yang tidak ada di daftar tidak dimuat. `storage` dan `indexeDB` tidak masuk daftar ini.
 
-Setelah mengubah daftar atau isi `config.json` sebuah driver, jalankan ulang nx8v.
+Halaman hanya mengirim `POST /api/storage`. Nama driver ada di badan JSON (`driver`). Server menerima nama itu hanya bila tertulis di `drivers` pada `config.json`. Daftar Network di browser menampilkan `storage`, bukan nama database. Setelah mengubah daftar atau isi `config.json` sebuah driver, jalankan ulang nx8v.
 
 | Nama | Alamat dari browser | Berkas pengatur |
 |---|---|---|
 | `sqlite` | `POST /api/storage` | berkas `sqlite/data.db` |
-| `mysql` | `POST /api/storage/mysql` | `mysql/config.json` |
-| `postgreSQL` | `POST /api/storage/postgreSQL` | `postgreSQL/config.json` |
-| `firebase` | `POST /api/storage/firebase` | `firebase/config.json` |
+| `mysql` | `POST /api/storage` | `mysql/config.json` |
+| `postgreSQL` | `POST /api/storage` | `postgreSQL/config.json` |
+| `firebase` | `POST /api/storage` | `firebase/config.json` |
 
 ### MySQL
 
@@ -424,7 +424,7 @@ Gagal:
 | `driver_unavailable` | nama belum masuk `config.json`, atau mesinnya tidak bisa dibuka |
 | `config_error` | `config.json` driver belum lengkap |
 | `sql_error` | perintah SQL di server gagal |
-| `network_error` | server atau database tidak terjangkau |
+| `network_error` | server atau database tidak terjangkau. Sambungan yang putus dibuang, lalu perintah yang sama dicoba sekali lagi. nx8v tetap jalan. |
 | `unauthorized` | Firebase menolak token (401) |
 | `permission_denied` | Firebase Rules menolak (403) |
 | `timeout` | server tidak menjawab dalam batas waktu |
@@ -555,13 +555,13 @@ modules/storage/
 ├── sqlite/index.js          POST /api/storage
 ├── sqlite/server.cjs
 ├── sqlite/data.db
-├── mysql/index.js           POST /api/storage/mysql
+├── mysql/index.js           POST /api/storage  driver mysql
 ├── mysql/server.cjs
 ├── mysql/config.json
-├── postgreSQL/index.js      POST /api/storage/postgreSQL
+├── postgreSQL/index.js      POST /api/storage  driver postgreSQL
 ├── postgreSQL/server.cjs
 ├── postgreSQL/config.json
-├── firebase/index.js        POST /api/storage/firebase
+├── firebase/index.js        POST /api/storage  driver firebase
 ├── firebase/server.cjs
 └── firebase/config.json
 ```

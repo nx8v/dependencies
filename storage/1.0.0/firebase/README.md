@@ -21,4 +21,4 @@ await firebase({ op: "insert", table: "users", data: { nama: "Budi", umur: 30 } 
 await firebase({ op: "select", table: "users", where: { umur: { ">": 20 } } });
 ```
 
-Perintahnya sama dengan `sqlite`, `mysql`, dan `postgreSQL`. Halaman hanya mengirim JSON ke `POST /api/storage/firebase`.
+Perintahnya sama dengan `sqlite`, `mysql`, dan `postgreSQL`. Halaman mengirim JSON ke `POST /api/storage` dengan `"driver": "firebase"`.

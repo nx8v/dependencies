@@ -62,28 +62,40 @@ function load(name) {
   return fn;
 }
 
-function refuse(res, name) {
-  const hint = wanted.has(name)
-    ? name + " tidak punya server. indexeDB dan localstorage jalan di browser."
-    : 'Tambahkan "' + name + '" ke drivers di modules/storage/config.json bila database itu dipakai.';
-  res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-  res.end(JSON.stringify({ ok: false, error: "driver_unavailable", hint }));
+function driverName(clean, cmd) {
+  if (clean === "/api/storage") {
+    const named = cmd && cmd.driver != null ? String(cmd.driver).trim() : "";
+    if (named) return named;
+    if (wanted.has("sqlite")) return "sqlite";
+    const first = wanted.values().next();
+    return first.done ? "" : first.value;
+  }
+  if (clean.startsWith("/api/storage/")) return decodeURIComponent(clean.slice("/api/storage/".length));
+  return "";
 }
 
 function handle(req, res) {
   if (req.method !== "POST") return false;
   const clean = String(req.url || "").split("?")[0];
-  let name = "";
-  if (clean === "/api/storage") name = "sqlite";
-  else if (clean.startsWith("/api/storage/")) name = decodeURIComponent(clean.slice("/api/storage/".length));
-  else return false;
-  if (!name || name.indexOf("/") !== -1) return false;
-  const run = load(name);
-  if (!run) {
-    refuse(res, name);
-    return true;
-  }
-  readJson(req, res, run);
+  if (clean !== "/api/storage" && !clean.startsWith("/api/storage/")) return false;
+  readJson(req, res, (cmd) => {
+    const name = driverName(clean, cmd);
+    if (!name || name.indexOf("/") !== -1) {
+      return {
+        ok: false,
+        error: "driver_unavailable",
+        hint: "Isi drivers di modules/storage/config.json",
+      };
+    }
+    const run = load(name);
+    if (!run) {
+      const hint = wanted.has(name)
+        ? name + " tidak punya server. indexeDB dan localstorage jalan di browser."
+        : 'Tambahkan "' + name + '" ke drivers di modules/storage/config.json bila database itu dipakai.';
+      return { ok: false, error: "driver_unavailable", hint };
+    }
+    return run(cmd);
+  });
   return true;
 }
 

@@ -53,7 +53,7 @@ export const sqlite = {
       res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...cmd, namespace }),
+        body: JSON.stringify({ ...cmd, namespace, driver: "sqlite" }),
         signal: controller ? controller.signal : undefined,
       });
     } catch (e) {

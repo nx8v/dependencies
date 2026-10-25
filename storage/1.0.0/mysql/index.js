@@ -7,9 +7,10 @@
  *   import { mysql } from "/storage";
  *   await mysql({ op: "insert", table: "users", data: { nama: "Budi" } });
  *
- * Alamat bawaan: POST /api/storage/mysql
+ * Alamat bawaan: POST /api/storage
+ * Nama driver ikut di badan JSON. config.json di server yang mengizinkannya.
  */
-let cfg = { url: "/api/storage/mysql" };
+let cfg = { url: "/api/storage" };
 
 export const mysql = {
   name: "mysql",
@@ -17,7 +18,7 @@ export const mysql = {
   config(obj) {
     if (obj === undefined) return cfg;
     if (obj && typeof obj === "object" && obj.url) cfg = { ...cfg, ...obj };
-    else cfg = { url: "/api/storage/mysql" };
+    else cfg = { url: "/api/storage" };
     return cfg;
   },
 
@@ -49,7 +50,7 @@ export const mysql = {
       res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...cmd, namespace }),
+        body: JSON.stringify({ ...cmd, namespace, driver: "mysql" }),
         signal: controller ? controller.signal : undefined,
       });
     } catch (e) {

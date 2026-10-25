@@ -267,6 +267,14 @@ function createHandle(spec) {
   let conn = null;
   let place = "";
 
+  function drop() {
+    const old = conn;
+    conn = null;
+    place = "";
+    if (!old) return;
+    try { old.close(); } catch (ignore) {}
+  }
+
   function database() {
     if (conn) return conn;
     const opened = spec.connect(require("db"));
@@ -820,19 +828,33 @@ function createHandle(spec) {
     return fail("unknown_op", 'op "' + op + '" tidak dikenal server ' + name);
   }
 
+  function deadLink(msg) {
+    return /koneksi sudah ditutup|waktu habis|sambungan putus|gagal tersambung|gagal menulis|tidak menjawab|terputus|refused|timeout|ECONN/i.test(msg);
+  }
+
+  function asFail(e) {
+    if (e && e.code === "config_error") return fail("config_error", e.hint || e.message);
+    const msg = e && e.message ? e.message : String(e);
+    if (/require\('db'\)|cannot find module/i.test(msg)) {
+      return fail("driver_unavailable", "Modul db belum ada di nx8v yang sedang berjalan. Jalankan ulang nx8v.");
+    }
+    if (deadLink(msg)) return fail("network_error", msg);
+    return fail("sql_error", msg);
+  }
+
   function handle(cmd) {
     try {
       return jawab(cmd || {});
     } catch (e) {
-      if (e && e.code === "config_error") return fail("config_error", e.hint || e.message);
       const msg = e && e.message ? e.message : String(e);
-      if (/require\('db'\)|cannot find module/i.test(msg)) {
-        return fail("driver_unavailable", "Modul db belum ada di nx8v yang sedang berjalan. Jalankan ulang nx8v.");
+      if (!deadLink(msg)) return asFail(e);
+      drop();
+      try {
+        return jawab(cmd || {});
+      } catch (again) {
+        drop();
+        return asFail(again);
       }
-      if (/refused|gagal masuk|terputus|timeout|ECONN/i.test(msg)) {
-        return fail("network_error", msg);
-      }
-      return fail("sql_error", msg);
     }
   }
 

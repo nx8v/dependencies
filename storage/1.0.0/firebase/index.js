@@ -7,9 +7,10 @@
  *   import { firebase } from "/storage";
  *   await firebase({ op: "insert", table: "users", data: { nama: "Budi" } });
  *
- * Alamat bawaan: POST /api/storage/firebase
+ * Alamat bawaan: POST /api/storage
+ * Nama driver ikut di badan JSON. config.json di server yang mengizinkannya.
  */
-let cfg = { url: "/api/storage/firebase" };
+let cfg = { url: "/api/storage" };
 
 export const firebase = {
   name: "firebase",
@@ -17,7 +18,7 @@ export const firebase = {
   config(obj) {
     if (obj === undefined) return cfg;
     if (obj && typeof obj === "object" && obj.url) cfg = { ...cfg, ...obj };
-    else cfg = { url: "/api/storage/firebase" };
+    else cfg = { url: "/api/storage" };
     return cfg;
   },
 
@@ -49,7 +50,7 @@ export const firebase = {
       res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...cmd, namespace }),
+        body: JSON.stringify({ ...cmd, namespace, driver: "firebase" }),
         signal: controller ? controller.signal : undefined,
       });
     } catch (e) {

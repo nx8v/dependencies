@@ -7,9 +7,10 @@
  *   import { postgreSQL } from "/storage";
  *   await postgreSQL({ op: "insert", table: "users", data: { nama: "Budi" } });
  *
- * Alamat bawaan: POST /api/storage/postgreSQL
+ * Alamat bawaan: POST /api/storage
+ * Nama driver ikut di badan JSON. config.json di server yang mengizinkannya.
  */
-let cfg = { url: "/api/storage/postgreSQL" };
+let cfg = { url: "/api/storage" };
 
 export const postgreSQL = {
   name: "postgreSQL",
@@ -17,7 +18,7 @@ export const postgreSQL = {
   config(obj) {
     if (obj === undefined) return cfg;
     if (obj && typeof obj === "object" && obj.url) cfg = { ...cfg, ...obj };
-    else cfg = { url: "/api/storage/postgreSQL" };
+    else cfg = { url: "/api/storage" };
     return cfg;
   },
 
@@ -49,7 +50,7 @@ export const postgreSQL = {
       res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...cmd, namespace }),
+        body: JSON.stringify({ ...cmd, namespace, driver: "postgreSQL" }),
         signal: controller ? controller.signal : undefined,
       });
     } catch (e) {
