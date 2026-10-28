@@ -362,12 +362,143 @@ function createHandle(spec) {
     return null;
   }
 
+  function oneStatement(sql) {
+    let bare = "";
+    let quote = "";
+    for (let i = 0; i < sql.length; i++) {
+      const ch = sql[i];
+      if (quote) {
+        if (ch === quote && sql[i - 1] !== "\\") quote = "";
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        quote = ch;
+        continue;
+      }
+      bare += ch;
+    }
+    return bare.split(";").map((part) => part.trim()).filter(Boolean).length <= 1;
+  }
+
+  function serverFileSql(sql) {
+    const bare = sql
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/--[^\n]*/g, " ")
+      .replace(/'(?:''|[^'])*'|"(?:\\"|[^"])*"/g, " ")
+      .toLowerCase();
+    if (/\bload_file\s*\(/.test(bare)) return true;
+    if (/\binto\s+(outfile|dumpfile)\b/.test(bare)) return true;
+    if (/\bload\s+data\b/.test(bare)) return true;
+    if (/\bsoname\b/.test(bare)) return true;
+    if (/\bsys_eval\b/.test(bare)) return true;
+    if (/\bpg_read_file\s*\(/.test(bare) || /\bpg_ls_dir\s*\(/.test(bare)) return true;
+    if (/\blo_(import|export)\s*\(/.test(bare)) return true;
+    if (/\bcopy\b[\s\S]{0,240}\bprogram\b/.test(bare)) return true;
+    return false;
+  }
+
+  function readsRows(sql) {
+    const bare = sql.replace(/'(?:''|[^'])*'|"(?:\\"|[^"])*"/g, " ");
+    return /^\s*(select|with|show|explain|describe|desc)\b/i.test(bare) || /\breturning\b/i.test(bare);
+  }
+
+  function txVerb(sql) {
+    const bare = sql
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/--[^\n]*/g, " ")
+      .replace(/'(?:''|[^'])*'|"(?:\\"|[^"])*"/g, " ");
+    const found = bare.match(/^\s*([A-Za-z]+)/);
+    return found ? found[1].toLowerCase() : "";
+  }
+
+  function paramsOk(params) {
+    return params.every((v) => v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean");
+  }
+
+  function runOne(c, sql, params) {
+    if (readsRows(sql)) {
+      const rows = c.all(sql, params);
+      return { rows: rows, count: rows.length };
+    }
+    const info = c.run(sql, params);
+    return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };
+  }
+
   function jawab(cmd) {
     const name = spec.name;
     const op = String((cmd && cmd.op) || "").toLowerCase();
     const ns = (cmd && cmd.namespace) || "default";
     const table = cmd && cmd.table != null && cmd.table !== "" ? String(cmd.table) : "";
     const key = cmd && (cmd.key != null || cmd.id != null) ? String(cmd.key != null ? cmd.key : cmd.id) : "";
+
+    if (op === "query" || (!op && cmd && String(cmd.sql || "").trim())) {
+      if (name !== "mysql" && name !== "postgreSQL") {
+        return fail("unknown_op", "op query hanya untuk mysql dan postgreSQL");
+      }
+      const sql = cmd && cmd.sql != null ? String(cmd.sql).trim() : "";
+      if (!sql) return fail("bad_request", "query butuh 'sql'");
+      if (!oneStatement(sql)) return fail("bad_request", "query menerima satu pernyataan SQL");
+      if (serverFileSql(sql)) return fail("bad_request", "query tidak boleh membaca atau menulis berkas server");
+      const params = Array.isArray(cmd.params) ? cmd.params : [];
+      if (!params.every((v) => v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean")) {
+        return fail("bad_request", "params harus array teks, angka, boolean, atau null");
+      }
+      const c = database();
+      if (readsRows(sql)) {
+        const rows = c.all(sql, params);
+        return ok(rows, { count: rows.length, driver: name });
+      }
+      const info = c.run(sql, params);
+      return ok(
+        { changes: info.changes, lastInsertRowid: info.lastInsertRowid },
+        { driver: name }
+      );
+    }
+
+    if (op === "transaction") {
+      if (name !== "mysql" && name !== "postgreSQL") {
+        return fail("unknown_op", "op transaction hanya untuk mysql dan postgreSQL");
+      }
+      const steps = Array.isArray(cmd.steps) ? cmd.steps : null;
+      if (!steps || !steps.length) return fail("bad_request", "transaction butuh 'steps'");
+      if (steps.length > 20) return fail("bad_request", "transaction maksimal 20 langkah");
+      const ready = [];
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i] || {};
+        const sql = step.sql != null ? String(step.sql).trim() : "";
+        const label = "langkah " + (i + 1);
+        if (!sql) return fail("bad_request", label + " butuh sql");
+        if (!oneStatement(sql)) return fail("bad_request", label + " harus satu pernyataan");
+        if (serverFileSql(sql)) return fail("bad_request", "query tidak boleh membaca atau menulis berkas server");
+        const verb = txVerb(sql);
+        if (verb !== "insert" && verb !== "update" && verb !== "delete" && verb !== "select" && verb !== "with") {
+          return fail("bad_request", label + " hanya boleh insert, update, delete, atau select");
+        }
+        const params = Array.isArray(step.params) ? step.params : [];
+        if (!paramsOk(params)) return fail("bad_request", label + ": params harus array teks, angka, boolean, atau null");
+        ready.push({ sql: sql, params: params });
+      }
+      const c = database();
+      c.exec("BEGIN");
+      const applied = [];
+      try {
+        for (let i = 0; i < ready.length; i++) {
+          try {
+            applied.push(runOne(c, ready[i].sql, ready[i].params));
+          } catch (e) {
+            try { c.exec("ROLLBACK"); } catch (ignore) {}
+            const msg = e && e.message ? e.message : String(e);
+            return fail("sql_error", "langkah " + (i + 1) + " dibatalkan: " + msg);
+          }
+        }
+        c.exec("COMMIT");
+        return ok(applied, { applied: applied.length, driver: name });
+      } catch (e) {
+        try { c.exec("ROLLBACK"); } catch (ignore) {}
+        throw e;
+      }
+    }
+
     const c = database();
 
     if (op === "tables" || op === "show_tables") {

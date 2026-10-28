@@ -22,8 +22,9 @@ import { localstorage } from "./localstorage/index.js?v=3";
 import { indexeDB as indexeDBDriver } from "./indexeDB/index.js?v=3";
 import { sqlite as sqliteDriver } from "./sqlite/index.js?v=4";
 import { firebase as firebaseDriver } from "./firebase/index.js?v=8";
-import { mysql as mysqlDriver } from "./mysql/index.js?v=4";
+import { mysql as mysqlDriver } from "./mysql/index.js?v=5";
 import { postgreSQL as postgreSQLDriver } from "./postgreSQL/index.js?v=4";
+import { models } from "./model/index.js?v=4";
 import "./engine.js?v=5";
 
 const MODULE_PREFIX = "nx";
@@ -52,8 +53,8 @@ const KNOWN_OPS = new Set([
   "set", "get", "update", "remove", "delete", "has",
   "insert", "select", "keys", "tables", "count", "search",
   "clear", "export", "import", "info",
-  "sql", "create_table", "show_tables", "create_index", "drop_table",
-  "join", "tx",
+  "sql", "query", "create_table", "show_tables", "create_index", "drop_table",
+  "join", "tx", "transaction",
   "add_column", "drop_column", "rename_column", "rename_table",
   "create_migration", "migrate", "migration_status",
   "config",
@@ -117,12 +118,17 @@ function normalize(cmd) {
     return { error: fail("bad_request", "Perintah harus berupa objek, contoh: { op: 'get', table: 'users', key: 'budi' }") };
   }
 
-  const rawOp = cmd.op;
+  let rawOp = cmd.op;
+  const hasSql = typeof cmd.sql === "string" && cmd.sql.trim();
+  if ((typeof rawOp !== "string" || !rawOp.trim()) && hasSql) {
+    rawOp = "query";
+  }
   if (typeof rawOp !== "string" || !rawOp.trim()) {
     return { error: fail("bad_request", "Field 'op' wajib diisi, contoh: 'set', 'get', 'select'") };
   }
 
-  const op = ALIAS[rawOp.toLowerCase()] || rawOp.toLowerCase();
+  const lowered = rawOp.toLowerCase();
+  const op = hasSql && lowered === "query" ? "query" : (ALIAS[lowered] || lowered);
   if (!KNOWN_OPS.has(op)) {
     return { error: fail("unknown_op", `op "${rawOp}" tidak dikenal. Yang tersedia: ${[...KNOWN_OPS].join(", ")}`) };
   }
@@ -332,6 +338,10 @@ function createAPI(driver) {
         { configured: driver.configured() },
         { driver: driver.name }
       );
+    }
+
+    if ((op === "query" || op === "transaction") && driver.name !== "mysql" && driver.name !== "postgreSQL") {
+      return fail("unknown_op", "op " + op + " hanya untuk mysql dan postgreSQL");
     }
 
     // mysql, postgreSQL, sqlite, dan firebase: perintah dikerjakan server.
@@ -670,6 +680,8 @@ function createAPI(driver) {
   api.export = (options) => api({ op: "export" }, options);
   api.import = (data, options) => api({ op: "import", data }, options);
   api.info = (options) => api({ op: "info" }, options);
+  api.query = (sql, params, options) => api({ op: "query", sql, params }, options);
+  api.sql = (sql, params, options) => api({ sql, params }, options);
 
   /**
    * Khusus driver firebase: set konfigurasi secara langsung.
@@ -731,5 +743,8 @@ export const mysql = createAPI(mysqlDriver);
 
 /** Driver PostgreSQL — POST /api/storage, sambungan di modules/storage/postgreSQL/config.json */
 export const postgreSQL = createAPI(postgreSQLDriver);
+
+/** SQL bisnis di modules/storage/model/. Ganti mysql di bawah bila proyek memakai postgreSQL. */
+export const model = models(mysql);
 
 export default storage;

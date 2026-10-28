@@ -123,6 +123,32 @@ Balasan sukses:
 
 `users` di contoh ini tabel yang sama dengan form, namespace `default`.
 
+### Query SQL
+
+Untuk SQL proyek, tulis teksnya di `sql`. Berlaku pada `mysql` dan `postgreSQL`. Placeholder `?` diisi lewat `params`. Satu pernyataan.
+
+```js
+import { mysql } from "/storage";
+
+const daftar = await mysql({
+  sql: "SELECT id, nama FROM pelanggan WHERE kota = ?",
+  params: ["Bandung"],
+});
+```
+
+Bentuk fungsi yang sama: `mysql.sql("SELECT id, nama FROM pelanggan WHERE kota = ?", ["Bandung"])`.
+
+SQL sebuah urusan bisnis ditaruh di `modules/storage/model/`. Halaman memakai perintah yang sama:
+
+```js
+import { model } from "/storage";
+const db = model;
+
+const daftar = await db({ op: "select", table: "pelanggan", where: { kota: "Bandung" } });
+```
+
+`SELECT` membalas array baris. `INSERT`, `UPDATE`, dan `DELETE` membalas `{ changes, lastInsertRowid }`. `insert` dokumen form tidak memakai field ini.
+
 ### MySQL
 
 `modules/storage/mysql/config.json`:
@@ -223,7 +249,8 @@ await storage('{"op":"select","table":"users"}');
 |---|---|
 | `put`, `upsert` | `set` |
 | `del` | `remove` |
-| `find`, `query` | `select` |
+| `find` | `select` |
+| `query` | `select`, bila tidak ada field `sql` |
 | `list` | `keys` |
 
 `delete` adalah perintah sendiri, sama hasilnya dengan `remove`.
@@ -395,7 +422,9 @@ await db({
 
 ### Transaksi
 
-`tx` hanya boleh berisi `insert`, `update`, dan `delete`. Satu langkah gagal, tidak ada yang tersimpan.
+`tx` menyimpan beberapa dokumen `insert`, `update`, dan `delete` bersama. Satu langkah gagal, tidak ada yang tersimpan.
+
+`transaction` untuk SQL MySQL atau PostgreSQL. Setiap langkah satu kalimat `insert`, `update`, `delete`, atau `select`. Langkah yang gagal membatalkan langkah sebelumnya.
 
 ```js
 await db({
@@ -403,6 +432,14 @@ await db({
   ops: [
     { op: "update", table: "users", where: { nama: "Siti" }, data: { umur: 18 } },
     { op: "delete", table: "orders", where: { status: "batal" } },
+  ],
+});
+
+await db({
+  op: "transaction",
+  steps: [
+    { sql: "INSERT INTO pesanan (nama) VALUES (?)", params: ["Budi"] },
+    { sql: "INSERT INTO pesanan_item (pesanan_id, barang, jumlah) VALUES (LAST_INSERT_ID(), ?, ?)", params: ["Buku", 2] },
   ],
 });
 ```
@@ -493,7 +530,8 @@ await storage({ op: "clear", all: true });
 | Tempat | browser | browser | berkas `.db` | MySQL | PostgreSQL | Firebase |
 | Jaringan | tidak | tidak | ke nx8v | ke nx8v, lalu MySQL | ke nx8v, lalu PostgreSQL | ke nx8v, lalu Firebase |
 | Dinyalakan di | — | — | `config.json` `drivers` | sama | sama | sama |
-| Perintah | sama | sama | sama | sama | sama | sama |
+| Perintah dokumen | sama | sama | sama | sama | sama | sama |
+| `query` (SQL sendiri) | tidak | tidak | tidak | ya | ya | tidak |
 
 ```js
 import { mysql } from "/storage";
@@ -572,9 +610,9 @@ await db({ op: "import", data: cadangan.data });
 4. Dua tab yang menulis `storage` atau `indexeDB` bersamaan: tulisan terakhir yang tinggal.
 5. `tx` pada `storage` dan `indexeDB` membatalkan perubahan di memori bila satu langkah gagal, lalu menulis hasilnya. Itu bukan kunci database antar tab.
 6. `sqlite`, `mysql`, `postgreSQL`, dan `firebase` berbagi data antar perangkat karena datanya di server.
-7. `config.json` driver berisi host dan kata sandi. Berkas di dalam modul yang berekstensi ikut terlayani, misalnya `/storage/mysql/config.json`. Jangan membiarkan proyek ini terbuka ke orang yang tidak boleh membaca sambungan itu.
+7. `config.json` driver berisi host dan kata sandi. Berkas tersembunyi, `config.json`, serta ekstensi `.php`, `.sql`, `.pem`, `.key`, `.so`, dan `.dll` tidak dikirim lewat HTTP.
 8. Mengubah `drivers` atau sambungan baru terbaca setelah nx8v dijalankan ulang.
-9. Perintah admin server (token, role, buat database, unggah berkas, websocket) tidak ada di modul ini.
+9. Akun halaman ada di modul `oauth`. Unggah berkas ada di modul `upload`. Token mesin ada di modul `middleware`. Modul storage tidak menyimpan ketiganya.
 
 ---
 
@@ -587,6 +625,10 @@ modules/storage/
 ├── server.cjs               dipasang NX8V; hanya memuat nama di config.json
 ├── config.json              daftar drivers yang hidup di server
 ├── kv.cjs                   perintah untuk sqlite, mysql, dan postgreSQL
+├── model/                   SQL bisnis, satu berkas satu urusan
+│   ├── index.js
+│   ├── pelanggan.js
+│   └── pesanan.js
 ├── localstorage/index.js
 ├── indexeDB/index.js
 ├── sqlite/index.js          POST /api/storage

@@ -6,6 +6,7 @@
  */
 const fs = require("fs");
 const path = require("path");
+const oauth = require("../oauth/server.cjs");
 
 function readJson(req, res, run) {
   let raw = "";
@@ -22,7 +23,9 @@ function readJson(req, res, run) {
     Promise.resolve()
       .then(() => run(cmd))
       .then((hasil) => {
-        const code = hasil && hasil.ok === false && (hasil.error === "bad_request" || hasil.error === "config_error") ? 400 : 200;
+        const denied = hasil && hasil.ok === false && hasil.error === "unauthorized";
+        const bad = hasil && hasil.ok === false && (hasil.error === "bad_request" || hasil.error === "config_error");
+        const code = denied ? 401 : bad ? 400 : 200;
         res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" });
         res.end(JSON.stringify(hasil));
       })
@@ -86,6 +89,13 @@ function handle(req, res) {
         error: "driver_unavailable",
         hint: "Isi drivers di modules/storage/config.json",
       };
+    }
+    const op = String((cmd && cmd.op) || "").toLowerCase();
+    const sqlText = cmd && cmd.sql != null ? String(cmd.sql).trim() : "";
+    if (op === "query" || op === "transaction" || (!op && sqlText)) {
+      if (!oauth.account(req)) {
+        return { ok: false, error: "unauthorized", hint: "masuk dulu di /oauth" };
+      }
     }
     const run = load(name);
     if (!run) {

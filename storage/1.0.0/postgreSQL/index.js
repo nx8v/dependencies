@@ -6,6 +6,7 @@
  *
  *   import { postgreSQL } from "/storage";
  *   await postgreSQL({ op: "insert", table: "users", data: { nama: "Budi" } });
+ *   await postgreSQL({ sql: "SELECT id, nama FROM pelanggan WHERE kota = ?", params: ["Bandung"] });
  *
  * Alamat bawaan: POST /api/storage
  * Nama driver ikut di badan JSON. config.json di server yang mengizinkannya.

@@ -6,6 +6,7 @@
  *
  *   import { mysql } from "/storage";
  *   await mysql({ op: "insert", table: "users", data: { nama: "Budi" } });
+ *   await mysql({ sql: "SELECT id, nama FROM pelanggan WHERE kota = ?", params: ["Bandung"] });
  *
  * Alamat bawaan: POST /api/storage
  * Nama driver ikut di badan JSON. config.json di server yang mengizinkannya.
@@ -45,12 +46,20 @@ export const mysql = {
     const ms = Number(cfg.timeout) > 0 ? Number(cfg.timeout) : 15000;
     const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
 
+    const payload = { ...cmd, namespace, driver: "mysql" };
+    if (typeof payload.sql === "string" && payload.sql.trim() && !String(payload.op || "").trim()) {
+      payload.op = "query";
+    }
+    for (const k of Object.keys(payload)) {
+      if (payload[k] === undefined) delete payload[k];
+    }
+
     let res;
     try {
       res = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify({ ...cmd, namespace, driver: "mysql" }),
+        body: JSON.stringify(payload),
         signal: controller ? controller.signal : undefined,
       });
     } catch (e) {

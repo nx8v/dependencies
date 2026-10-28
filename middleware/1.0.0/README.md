@@ -4,7 +4,7 @@ Pemeriksaan `Authorization: Bearer` untuk API yang dipilih. Daftar target, token
 
 Modul ini berdiri sendiri. `modules/api` dan `modules/proxy` tidak membandingkan token. NX8V memanggil modul ini lebih dulu karena `"middleware"` adalah kunci pertama di `dependencies`.
 
-Alamat pengelola adalah `/middleware`, terpisah dari `/api`. API yang tidak masuk tabel target tetap terbuka. `POST /api/storage` tidak ikut tabel ini.
+Alamat pengelola adalah `/middleware`, terpisah dari `/api`. API yang tidak masuk tabel target tetap terbuka. `POST /api/storage` tidak ikut tabel ini. Akun halaman ada di modul `oauth` dan tidak menjadi target Bearer. Path `/api/oauth` dilewati pemeriksaan ini.
 
 Jalankan ulang nx8v sekali supaya modul ini terpasang. Perubahan isi SQLite setelah itu langsung berlaku.
 

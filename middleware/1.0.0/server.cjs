@@ -133,7 +133,7 @@ function targetOf(url) {
   const parts = clean.split("/").filter(Boolean);
   if (parts.length < 2) return null;
   const raw = parts[1];
-  if (raw === "storage" || raw === "hello" || raw === "middleware" || raw === "proxy") return null;
+  if (raw === "storage" || raw === "hello" || raw === "middleware" || raw === "proxy" || raw === "oauth") return null;
   const name = cleanPart(raw);
   if (!name) return null;
   if (proxyAliases().has(name)) return { kind: "proxy", name, path: clean };

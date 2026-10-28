@@ -12,7 +12,7 @@ import {
   exportToPDF,
 } from "./Export.js";
 import "./index.css";
-
+import "./pagination.css";
 // Ikon + floating editor — DEFAULT LOKAL (mandiri, tanpa import modul lama
 // `../icons/NexaIcons.js` / `../floating/NexaFloating.js`). Implementasi di
 // bawah ini padanan 1:1 resolver ikon Fluent; generator field floating

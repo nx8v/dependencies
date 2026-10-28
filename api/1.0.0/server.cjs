@@ -115,7 +115,7 @@ function routeOf(url) {
   const parts = clean.split("/").filter(Boolean);
   if (parts.length < 2 || parts[0] !== "api") return null;
   const name = decodePart(parts[1]);
-  if (name == null || name === "storage" || name === "hello" || name === "proxy" || name === "middleware") return null;
+  if (name == null || name === "storage" || name === "hello" || name === "proxy" || name === "middleware" || name === "oauth") return null;
   if (parts.length > 4) return { missing: true, path: clean };
   const id = parts.length >= 3 ? decodePart(parts[2]) : "";
   const child = parts.length === 4 ? decodePart(parts[3]) : "";

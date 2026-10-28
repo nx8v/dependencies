@@ -72,9 +72,9 @@ Setelah mengubah `modules/api/config.json` atau `dependencies`, jalankan ulang n
 
 Menambah resource berarti menambah satu string di `resources`, lalu menjalankan ulang nx8v. Tidak ada kompilasi ulang dan tidak ada rute baru di `server.js`.
 
-Sambungan host, port, user, dan password tetap di config driver storage, misalnya `modules/storage/mysql/config.json`. Berkas di folder modul yang ber-ekstensi dapat diunduh lewat HTTP, jadi rahasia tidak ditulis di `modules/api/config.json`.
+Sambungan host, port, user, dan password tetap di config driver storage, misalnya `modules/storage/mysql/config.json`. Berkas `config.json` tidak dikirim lewat HTTP. Rahasia tidak ditulis di `modules/api/config.json`.
 
-Nama `storage`, `hello`, `proxy`, dan `middleware` dilewati modul ini, begitu juga path di bawah `/api/storage/`. Alias yang sudah terdaftar di modul Proxy, misalnya `feed`, dilayani sebagai `/api/feed`. Pengelola token ada di `/middleware`, terpisah dari `/api`.
+Nama `storage`, `hello`, `proxy`, `middleware`, dan `oauth` dilewati modul ini, begitu juga path di bawah `/api/storage/`. Alias yang sudah terdaftar di modul Proxy, misalnya `feed`, dilayani sebagai `/api/feed`. Pengelola token ada di `/middleware`, terpisah dari `/api`. Akun halaman ada di modul `oauth`.
 
 Karena situs ini SPA, `GET` di luar `/api` yang bukan berkas dilayani sebagai halaman. Resource pihak lain selalu di bawah `/api`.
 
